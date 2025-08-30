@@ -3,14 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
-// ---- HARİTA için ----
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-
 // ---- UI/Charts ----
 import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(const SecretWaterApp());
 
@@ -78,6 +75,42 @@ class _RootShellState extends State<RootShell> with TickerProviderStateMixin {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Secret Water'),
+        actions: [
+          // XP rozeti + profil
+          FutureBuilder<int>(
+            future: Gamify.xp(),
+            builder: (context, snap) {
+              final xp = snap.data ?? 0;
+              return IconButton(
+                tooltip: 'Profil / Üyelik • XP: $xp',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AccountPage()),
+                ),
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.person_outline),
+                    Positioned(
+                      right: -6,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$xp',
+                          style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tab,
           tabs: const [
@@ -123,8 +156,8 @@ class _RootShellState extends State<RootShell> with TickerProviderStateMixin {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
               ),
             ],
@@ -211,18 +244,17 @@ class OutageItem {
   });
 
   factory OutageItem.fromJson(Map<String, dynamic> m) => OutageItem(
-    ilce: _getAny(m, ['IlceAdi', 'ilce', 'district'])?.toString(),
-    mahalle: _getAny(m, ['Mahalleler', 'Mahalle', 'mahalle'])?.toString(),
-    ongoru: m['Ongoru']?.toString(),
-    birimamirligi: _getAny(m, ['Birim', 'BirimAmirligi'])?.toString(),
-    kesintisuresi: m['KesintiSuresi']?.toString(),
-    sebep: _getAny(m, ['Tip', 'sebep', 'Neden'])?.toString(),
-    aciklama: _getAny(m, ['Aciklama', 'Açıklama', 'aciklama'])?.toString(),
-    baslangic: _toDate(
-      _getAny(m, ['Baslangic', 'Başlangic', 'BaslamaTarihi', 'Start']),
-    ),
-    bitis: _toDate(_getAny(m, ['Bitis', 'Bitiş', 'BitisTarihi', 'Finish'])),
-  );
+        ilce: _getAny(m, ['IlceAdi', 'ilce', 'district'])?.toString(),
+        mahalle: _getAny(m, ['Mahalleler', 'Mahalle', 'mahalle'])?.toString(),
+        ongoru: m['Ongoru']?.toString(),
+        birimamirligi: _getAny(m, ['Birim', 'BirimAmirligi'])?.toString(),
+        kesintisuresi: m['KesintiSuresi']?.toString(),
+        sebep: _getAny(m, ['Tip', 'sebep', 'Neden'])?.toString(),
+        aciklama: _getAny(m, ['Aciklama', 'Açıklama', 'aciklama'])?.toString(),
+        baslangic: _toDate(
+            _getAny(m, ['Baslangic', 'Başlangic', 'BaslamaTarihi', 'Start'])),
+        bitis: _toDate(_getAny(m, ['Bitis', 'Bitiş', 'BitisTarihi', 'Finish'])),
+      );
 }
 
 class ReservoirStatus {
@@ -253,76 +285,39 @@ class ReservoirStatus {
   });
 
   factory ReservoirStatus.fromJson(Map<String, dynamic> m) => ReservoirStatus(
-    ad: _getAny(m, ['BarajKuyuAdi', 'BarajAdı', 'KaynakAdi', 'Ad'])?.toString(),
-    doluluk: _toDouble(_getAny(m, ['Doluluk', 'Oran', 'DolulukOrani'])),
-    hacim: _toDouble(
-      _getAny(m, [
-        'KullanılabilirGolSuHacmi',
-        'HacimM3',
-        'Hacim_(m3)',
-        'MevcutHacim',
-      ]),
-    ),
-    seviye: _getAny(m, ['Kademe', 'Durum'])?.toString(),
-    tarih: _toDate(
-      _getAny(m, ['DurumTarihi', 'GuncellemeTarihi', 'Güncelleme']),
-    ),
-    tuketilebilirKapasite: _toDouble(
-      _getAny(m, [
-        'TuketilebilirSuKapasitesi',
-        'TüketilebilirSuKapasitesi',
-        'TuketilebilirKapasite',
-        'Tuketilebilir',
-      ]),
-    ),
-    maxKapasite: _toDouble(
-      _getAny(m, ['MaksimumSuKapasitesi', 'MaksSuKapasitesi', 'MaxKapasite']),
-    ),
-    minKapasite: _toDouble(
-      _getAny(m, ['MinimumSuKapasitesi', 'MinSuKapasitesi', 'MinKapasite']),
-    ),
-    minYukseklik: _toDouble(
-      _getAny(m, [
-        'MinimumSuYuksekligi',
-        'MinimumSuYüksekliği',
-        'MinSuYuksekligi',
-        'MinYukseklik',
-      ]),
-    ),
-    maxYukseklik: _toDouble(
-      _getAny(m, [
-        'MaksimumSuYuksekligi',
-        'MaksimumSuYüksekliği',
-        'MaxSuYuksekligi',
-        'MaxYukseklik',
-      ]),
-    ),
-  );
-}
-
-/* --- Baraj/Kuyu/Kaynak konum modeli (harita) --- */
-class WaterSource {
-  final String? ad;
-  final String? tur; // Baraj/Kuyu/Kaynak
-  final double? lat;
-  final double? lon;
-
-  WaterSource({this.ad, this.tur, this.lat, this.lon});
-
-  factory WaterSource.fromJson(Map<String, dynamic> m) {
-    double? _d(v) {
-      if (v == null) return null;
-      if (v is num) return v.toDouble();
-      return double.tryParse(v.toString().replaceAll(',', '.'));
-    }
-
-    return WaterSource(
-      ad: _getAny(m, ['Ad', 'Adi', 'KaynakAdi', 'BarajAdi', 'Adı'])?.toString(),
-      tur: _getAny(m, ['Tur', 'Tür', 'KaynakTuru', 'Tip'])?.toString(),
-      lat: _d(_getAny(m, ['Lat', 'Latitude', 'Enlem', 'lat'])),
-      lon: _d(_getAny(m, ['Lon', 'Lng', 'Longitude', 'Boylam', 'lon'])),
-    );
-  }
+        ad: _getAny(m, ['BarajKuyuAdi', 'BarajAdı', 'KaynakAdi', 'Ad'])?.toString(),
+        doluluk: _toDouble(_getAny(m, ['Doluluk', 'Oran', 'DolulukOrani'])),
+        hacim: _toDouble(_getAny(m, [
+          'KullanılabilirGolSuHacmi',
+          'HacimM3',
+          'Hacim_(m3)',
+          'MevcutHacim',
+        ])),
+        seviye: _getAny(m, ['Kademe', 'Durum'])?.toString(),
+        tarih: _toDate(_getAny(m, ['DurumTarihi', 'GuncellemeTarihi', 'Güncelleme'])),
+        tuketilebilirKapasite: _toDouble(_getAny(m, [
+          'TuketilebilirSuKapasitesi',
+          'TüketilebilirSuKapasitesi',
+          'TuketilebilirKapasite',
+          'Tuketilebilir',
+        ])),
+        maxKapasite: _toDouble(
+            _getAny(m, ['MaksimumSuKapasitesi', 'MaksSuKapasitesi', 'MaxKapasite'])),
+        minKapasite: _toDouble(
+            _getAny(m, ['MinimumSuKapasitesi', 'MinSuKapasitesi', 'MinKapasite'])),
+        minYukseklik: _toDouble(_getAny(m, [
+          'MinimumSuYuksekligi',
+          'MinimumSuYüksekliği',
+          'MinSuYuksekligi',
+          'MinYukseklik'
+        ])),
+        maxYukseklik: _toDouble(_getAny(m, [
+          'MaksimumSuYuksekligi',
+          'MaksimumSuYüksekliği',
+          'MaxSuYuksekligi',
+          'MaxYukseklik'
+        ])),
+      );
 }
 
 /* -------------------------------- Servisler ----------------------------- */
@@ -342,9 +337,7 @@ class IzsuApi {
     final data = jsonDecode(utf8.decode(res.bodyBytes));
     final list = (data is List) ? data : (data['data'] ?? data['result'] ?? []);
     return list
-        .map<OutageItem>(
-          (e) => OutageItem.fromJson(Map<String, dynamic>.from(e)),
-        )
+        .map<OutageItem>((e) => OutageItem.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -357,22 +350,7 @@ class IzsuApi {
     final list = (data is List) ? data : (data['data'] ?? data['result'] ?? []);
     return list
         .map<ReservoirStatus>(
-          (e) => ReservoirStatus.fromJson(Map<String, dynamic>.from(e)),
-        )
-        .toList();
-  }
-
-  static Future<List<WaterSource>> fetchSources() async {
-    final res = await _get(Uri.parse('$_base/barajvekuyular'));
-    if (res.statusCode != 200) {
-      throw Exception('Baraj/Kuyular hata: ${res.statusCode}');
-    }
-    final data = jsonDecode(utf8.decode(res.bodyBytes));
-    final list = (data is List) ? data : (data['data'] ?? data['result'] ?? []);
-    return list
-        .map<WaterSource>(
-          (e) => WaterSource.fromJson(Map<String, dynamic>.from(e)),
-        )
+            (e) => ReservoirStatus.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 }
@@ -415,8 +393,7 @@ class _OutagesTabState extends State<OutagesTab> {
         final ilceler = {'Tümü', ...all.map((e) => e.ilce ?? '-')}.toList()
           ..sort();
         var items = all.where((e) {
-          final t = '${e.ilce} ${e.mahalle} ${e.sebep} ${e.aciklama}'
-              .toLowerCase();
+          final t = '${e.ilce} ${e.mahalle} ${e.sebep} ${e.aciklama}'.toLowerCase();
           final okText = t.contains(_query.toLowerCase());
           final okIlce = _ilce == 'Tümü' || (e.ilce ?? '-') == _ilce;
           return okText && okIlce;
@@ -432,10 +409,7 @@ class _OutagesTabState extends State<OutagesTab> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 220,
-                      maxWidth: 900,
-                    ),
+                    constraints: const BoxConstraints(minWidth: 220, maxWidth: 900),
                     child: SizedBox(
                       width: double.infinity,
                       child: TextField(
@@ -444,7 +418,11 @@ class _OutagesTabState extends State<OutagesTab> {
                           hintText: 'İlçe/mahalle/sebep ara',
                           border: OutlineInputBorder(),
                         ),
-                        onChanged: (v) => setState(() => _query = v.trim()),
+                        onChanged: (v) {
+                          setState(() => _query = v.trim());
+                          Gamify.incrementCounter(context, 'filter_use',
+                              target: 3, xp: 15, label: 'Filtre Ustası');
+                        },
                       ),
                     ),
                   ),
@@ -453,7 +431,11 @@ class _OutagesTabState extends State<OutagesTab> {
                     items: ilceler
                         .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                         .toList(),
-                    onChanged: (v) => setState(() => _ilce = v!),
+                    onChanged: (v) {
+                      setState(() => _ilce = v!);
+                      Gamify.incrementCounter(context, 'filter_use',
+                          target: 3, xp: 15, label: 'Filtre Ustası');
+                    },
                   ),
                 ],
               ),
@@ -499,7 +481,7 @@ class _OutageCard extends StatelessWidget {
     final e = _elapsed();
     double? pct;
     if (d != null && e != null && d.inSeconds > 0) {
-      pct = (e.inSeconds / d.inSeconds).clamp(0.0, 1.0);
+      pct = ((e.inSeconds / d.inSeconds).clamp(0.0, 1.0)).toDouble();
     }
 
     String badge() {
@@ -509,9 +491,8 @@ class _OutageCard extends StatelessWidget {
       return 'Aktif';
     }
 
-    final color = badge() == 'Bitti'
-        ? Colors.green
-        : Theme.of(context).colorScheme.primary;
+    final color =
+        badge() == 'Bitti' ? Colors.green : Theme.of(context).colorScheme.primary;
 
     String prettyDur(Duration? x) {
       if (x == null) return '-';
@@ -539,10 +520,7 @@ class _OutageCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withOpacity(.15),
                     borderRadius: BorderRadius.circular(20),
@@ -563,12 +541,9 @@ class _OutageCard extends StatelessWidget {
             _kv('Sebep', item.sebep ?? item.aciklama ?? '-'),
             _kv('Birim', item.birimamirligi ?? '-'),
             if (item.ongoru != null) _kv('Öngörülen', item.ongoru!),
-            if (item.kesintisuresi != null)
-              _kv('Süre', item.kesintisuresi!),
+            if (item.kesintisuresi != null) _kv('Süre', item.kesintisuresi!),
             if (item.aciklama != null) _kv('Açıklama', item.aciklama!),
-                
-            if (item.baslangic != null)
-              _kv('Başlangıç', fmtDate(item.baslangic)),
+            if (item.baslangic != null) _kv('Başlangıç', fmtDate(item.baslangic)),
             if (item.bitis != null) _kv('Bitiş', fmtDate(item.bitis)),
             if (d != null) _kv('Planlanan', prettyDur(d)),
             if (e != null) _kv('Geçen', prettyDur(e)),
@@ -586,7 +561,7 @@ class _OutageCard extends StatelessWidget {
   }
 }
 
-/* ------------------------------ UI: Barajlar (Pro, Sliver) --------------- */
+/* ------------------------------ UI: Barajlar (Liste + Grafik) ----------- */
 
 class ReservoirsProTab extends StatefulWidget {
   const ReservoirsProTab({super.key});
@@ -595,48 +570,19 @@ class ReservoirsProTab extends StatefulWidget {
 }
 
 class _ReservoirsProTabState extends State<ReservoirsProTab> {
-  late Future<_ReservoirBundle> _future;
-  int _mode = 0; // 0: Liste, 1: Harita, 2: Grafikler
+  late Future<List<ReservoirStatus>> _future;
+  int _mode = 0; // 0: Liste, 1: Grafikler
   String _query = '';
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
-  }
-
-  Future<_ReservoirBundle> _load() async {
-    final statuses = await IzsuApi.fetchReservoirs();
-    final sources = await IzsuApi.fetchSources();
-
-    String norm(String? s) => (s ?? '')
-        .toLowerCase()
-        .replaceAll('ğ', 'g')
-        .replaceAll('ü', 'u')
-        .replaceAll('ş', 's')
-        .replaceAll('ı', 'i')
-        .replaceAll('ö', 'o')
-        .replaceAll('ç', 'c')
-        .replaceAll(RegExp(r'[^a-z0-9 ]'), '')
-        .trim();
-
-    final locByName = <String, WaterSource>{};
-    for (final w in sources) {
-      locByName[norm(w.ad)] = w;
-    }
-
-    final withCoords = <_ReservoirWithCoord>[];
-    for (final st in statuses) {
-      withCoords.add(
-        _ReservoirWithCoord(status: st, loc: locByName[norm(st.ad)]),
-      );
-    }
-    return _ReservoirBundle(all: withCoords);
+    _future = IzsuApi.fetchReservoirs();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_ReservoirBundle>(
+    return FutureBuilder<List<ReservoirStatus>>(
       future: _future,
       builder: (c, s) {
         if (s.connectionState != ConnectionState.done) {
@@ -645,34 +591,33 @@ class _ReservoirsProTabState extends State<ReservoirsProTab> {
         if (s.hasError) {
           return _errorBox(
             icon: Icons.cloud_off,
-            text: 'Baraj servisi/konumu alınamadı.\n${s.error}',
-            onRetry: () => setState(() => _future = _load()),
+            text: 'Baraj servisi alınamadı.\n${s.error}',
+            onRetry: () => setState(() => _future = IzsuApi.fetchReservoirs()),
           );
         }
 
-        // filtre
-        var items = s.data!.all;
+        var items = s.data!;
         if (_query.isNotEmpty) {
           final q = _query.toLowerCase();
-          items = items
-              .where((e) => (e.status.ad ?? '').toLowerCase().contains(q))
-              .toList();
+          items = items.where((e) => (e.ad ?? '').toLowerCase().contains(q)).toList();
         }
 
         // özet metrikler
-        final fills = items.map((e) => e.status.doluluk ?? 0).toList();
-        final avgFill = fills.isEmpty
-            ? 0
-            : fills.reduce((a, b) => a + b) / fills.length;
-        final totalVol = items
-            .map((e) => e.status.hacim ?? 0)
-            .fold<double>(0, (a, b) => a + b);
-        final worst = [...items]
-          ..sort(
-            (a, b) => (a.status.doluluk ?? 0).compareTo(b.status.doluluk ?? 0),
-          );
+        final double avgFill = items.isEmpty
+            ? 0.0
+            : items
+                    .map((e) => (e.doluluk ?? 0.0).toDouble())
+                    .fold<double>(0.0, (a, b) => a + b) /
+                items.length;
 
-        // --- HEADER bileşeni (scroll ile birlikte hareket) ---
+        final double totalVol = items
+            .map((e) => (e.hacim ?? 0.0).toDouble())
+            .fold<double>(0.0, (a, b) => a + b);
+
+        final worst = [...items]
+          ..sort((a, b) => (a.doluluk ?? 0.0).compareTo(b.doluluk ?? 0.0));
+
+        // HEADER
         Widget header = Column(
           children: [
             Padding(
@@ -683,10 +628,7 @@ class _ReservoirsProTabState extends State<ReservoirsProTab> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 260,
-                      maxWidth: 900,
-                    ),
+                    constraints: const BoxConstraints(minWidth: 260, maxWidth: 900),
                     child: SizedBox(
                       width: double.infinity,
                       child: TextField(
@@ -699,30 +641,18 @@ class _ReservoirsProTabState extends State<ReservoirsProTab> {
                       ),
                     ),
                   ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SegmentedButton<int>(
-                      segments: const [
-                        ButtonSegment(
-                          value: 0,
-                          icon: Icon(Icons.view_list),
-                          label: Text('Liste'),
-                        ),
-                        ButtonSegment(
-                          value: 1,
-                          icon: Icon(Icons.map),
-                          label: Text('Harita'),
-                        ),
-                        ButtonSegment(
-                          value: 2,
-                          icon: Icon(Icons.insert_chart_outlined),
-                          label: Text('Grafikler'),
-                        ),
-                      ],
-                      selected: {_mode},
-                      onSelectionChanged: (v) =>
-                          setState(() => _mode = v.first),
-                    ),
+                  SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 0, icon: Icon(Icons.view_list), label: Text('Liste')),
+                      ButtonSegment(value: 1, icon: Icon(Icons.insert_chart_outlined), label: Text('Grafikler')),
+                    ],
+                    selected: {_mode},
+                    onSelectionChanged: (v) {
+                      setState(() => _mode = v.first);
+                      if (_mode == 1) {
+                        Gamify.checkAndComplete(context, 'view_charts', xp: 15, label: 'Analist');
+                      }
+                    },
                   ),
                 ],
               ),
@@ -736,9 +666,7 @@ class _ReservoirsProTabState extends State<ReservoirsProTab> {
                   const double tileMin = 260;
                   int perRow = (w / (tileMin + gap)).floor();
                   if (perRow < 1) perRow = 1;
-                  final double tileW = perRow == 1
-                      ? w
-                      : (w - gap * (perRow - 1)) / perRow;
+                  final double tileW = perRow == 1 ? w : (w - gap * (perRow - 1)) / perRow;
 
                   return Wrap(
                     spacing: gap,
@@ -746,29 +674,18 @@ class _ReservoirsProTabState extends State<ReservoirsProTab> {
                     children: [
                       SizedBox(
                         width: tileW,
-                        child: _SummaryTile(
-                          title: 'Ortalama Doluluk',
-                          value: fmtPct(avgFill as double?),
-                          icon: Icons.speed,
-                        ),
+                        child:
+                            _SummaryTile(title: 'Ortalama Doluluk', value: fmtPct(avgFill), icon: Icons.speed),
                       ),
                       SizedBox(
                         width: tileW,
-                        child: _SummaryTile(
-                          title: 'Toplam Hacim',
-                          value: fmtVol(totalVol),
-                          icon: Icons.water_drop,
-                        ),
+                        child: _SummaryTile(title: 'Toplam Hacim', value: fmtVol(totalVol), icon: Icons.water_drop),
                       ),
                       SizedBox(
                         width: tileW,
                         child: _SummaryTile(
                           title: 'En Düşük (3)',
-                          value: worst
-                              .take(3)
-                              .map((e) => (e.status.ad ?? '-'))
-                              .join(', ')
-                              .ifEmpty('-'),
+                          value: worst.take(3).map((e) => (e.ad ?? '-')).join(', ').ifEmpty('-'),
                           icon: Icons.warning_amber_rounded,
                         ),
                       ),
@@ -782,12 +699,7 @@ class _ReservoirsProTabState extends State<ReservoirsProTab> {
 
         return NestedScrollView(
           headerSliverBuilder: (_, __) => [SliverToBoxAdapter(child: header)],
-          body: switch (_mode) {
-            0 => _ProList(items: items),
-            1 => _MapBody(items: items),
-            2 => _ChartsBody(items: items),
-            _ => _ProList(items: items),
-          },
+          body: _mode == 0 ? _ProList(items: items) : _ChartsBody(items: items),
         );
       },
     );
@@ -797,7 +709,7 @@ class _ReservoirsProTabState extends State<ReservoirsProTab> {
 /* ------------------------------ List Body -------------------------------- */
 
 class _ProList extends StatelessWidget {
-  final List<_ReservoirWithCoord> items;
+  final List<ReservoirStatus> items;
   const _ProList({required this.items});
 
   @override
@@ -808,12 +720,9 @@ class _ProList extends StatelessWidget {
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, i) {
-        final it = items[i].status;
-        final loc = items[i].loc;
-        final double percent = (((it.doluluk ?? 0) / 100).clamp(
-          0.0,
-          1.0,
-        )).toDouble();
+        final it = items[i];
+        final double percent =
+            (((it.doluluk ?? 0) / 100).clamp(0.0, 1.0)).toDouble();
 
         Color badgeColor() {
           final p = it.doluluk ?? 0;
@@ -836,28 +745,12 @@ class _ProList extends StatelessWidget {
                         it.ad ?? 'Baraj/Kaynak',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium!
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium!
                             .copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
-                    if (loc?.lat != null && loc?.lon != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.place, size: 16),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${loc!.lat!.toStringAsFixed(3)}, ${loc.lon!.toStringAsFixed(3)}',
-                                style: Theme.of(context).textTheme.labelMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -868,14 +761,10 @@ class _ProList extends StatelessWidget {
                       lineWidth: 8,
                       percent: percent,
                       center: Text(
-                        it.doluluk == null
-                            ? '-'
-                            : '${it.doluluk!.toStringAsFixed(1)}%',
+                        it.doluluk == null ? '-' : '${it.doluluk!.toStringAsFixed(1)}%',
                       ),
                       progressColor: badgeColor(),
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.surfaceVariant,
+                      backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                       circularStrokeCap: CircularStrokeCap.round,
                     ),
                     const SizedBox(width: 16),
@@ -891,10 +780,8 @@ class _ProList extends StatelessWidget {
                               _M('Tük. Su', fmtVol(it.tuketilebilirKapasite)),
                               _M('MAX Kap.', fmtVol(it.maxKapasite)),
                               _M('MIN Kap.', fmtVol(it.minKapasite)),
-                              _M(
-                                'Yükseklik',
-                                '${fmtHeight(it.minYukseklik)} / ${fmtHeight(it.maxYukseklik)}',
-                              ),
+                              _M('Yükseklik',
+                                  '${fmtHeight(it.minYukseklik)} / ${fmtHeight(it.maxYukseklik)}'),
                             ],
                           ),
                         ],
@@ -921,48 +808,29 @@ class _ProList extends StatelessWidget {
   }
 }
 
-/* ------------------------------ Map Body --------------------------------- */
-
-class _MapBody extends StatelessWidget {
-  final List<_ReservoirWithCoord> items;
-  const _MapBody({required this.items});
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: _ReservoirMap(items: items),
-    );
-  }
-}
-
 /* ------------------------------ Charts Body ------------------------------ */
 
 class _ChartsBody extends StatelessWidget {
-  final List<_ReservoirWithCoord> items;
+  final List<ReservoirStatus> items;
   const _ChartsBody({required this.items});
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const Center(child: Text('Kayıt yok.'));
     final sorted = [...items]
-      ..sort(
-        (a, b) => ((b.status.doluluk ?? 0).compareTo(a.status.doluluk ?? 0)),
-      );
+      ..sort((a, b) => ((b.doluluk ?? 0).compareTo(a.doluluk ?? 0)));
     final top10 = sorted.take(10).toList();
 
-    final totalVol = items
-        .map((e) => e.status.hacim ?? 0)
-        .fold<double>(0, (a, b) => a + b);
-    final low = items.where((e) => (e.status.doluluk ?? 0) < 30).toList();
-    final mid = items
-        .where(
-          (e) => (e.status.doluluk ?? 0) >= 30 && (e.status.doluluk ?? 0) < 60,
-        )
-        .toList();
-    final high = items.where((e) => (e.status.doluluk ?? 0) >= 60).toList();
+    final double totalVol = items
+        .map((e) => (e.hacim ?? 0).toDouble())
+        .fold<double>(0.0, (a, b) => a + b);
 
-    double sumVol(List<_ReservoirWithCoord> l) =>
-        l.map((e) => e.status.hacim ?? 0).fold<double>(0, (a, b) => a + b);
+    final low = items.where((e) => (e.doluluk ?? 0) < 30).toList();
+    final mid = items.where((e) => (e.doluluk ?? 0) >= 30 && (e.doluluk ?? 0) < 60).toList();
+    final high = items.where((e) => (e.doluluk ?? 0) >= 60).toList();
+
+    double sumVol(List<ReservoirStatus> l) =>
+        l.map((e) => (e.hacim ?? 0).toDouble()).fold<double>(0.0, (a, b) => a + b);
 
     return ListView(
       padding: const EdgeInsets.all(12),
@@ -973,10 +841,7 @@ class _ChartsBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionTitle(
-                  icon: Icons.bar_chart,
-                  title: 'Top 10 – Doluluk Oranı',
-                ),
+                _SectionTitle(icon: Icons.bar_chart, title: 'Top 10 – Doluluk Oranı'),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 260,
@@ -987,22 +852,15 @@ class _ChartsBody extends StatelessWidget {
                       alignment: BarChartAlignment.spaceAround,
                       titlesData: FlTitlesData(
                         leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 32,
-                          ),
+                          sideTitles: SideTitles(showTitles: true, reservedSize: 32),
                         ),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
                             getTitlesWidget: (v, meta) {
                               final idx = v.toInt();
-                              if (idx < 0 || idx >= top10.length) {
-                                return const SizedBox.shrink();
-                              }
-                              final name = (top10[idx].status.ad ?? '')
-                                  .split(' ')
-                                  .first;
+                              if (idx < 0 || idx >= top10.length) return const SizedBox.shrink();
+                              final name = (top10[idx].ad ?? '').split(' ').first;
                               return Padding(
                                 padding: const EdgeInsets.only(top: 6),
                                 child: Text(
@@ -1014,12 +872,8 @@ class _ChartsBody extends StatelessWidget {
                             },
                           ),
                         ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                       ),
                       barGroups: [
                         for (int i = 0; i < top10.length; i++)
@@ -1027,11 +881,9 @@ class _ChartsBody extends StatelessWidget {
                             x: i,
                             barRods: [
                               BarChartRodData(
-                                toY: (top10[i].status.doluluk ?? 0).toDouble(),
+                                toY: (top10[i].doluluk ?? 0).toDouble(),
                                 width: 16,
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(8),
-                                ),
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
                               ),
                             ],
                           ),
@@ -1050,10 +902,7 @@ class _ChartsBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionTitle(
-                  icon: Icons.pie_chart_outline,
-                  title: 'Toplam: ${fmtVol(totalVol)})',
-                ),
+                _SectionTitle(icon: Icons.pie_chart_outline, title: 'Toplam: ${fmtVol(totalVol)}'),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 220,
@@ -1062,21 +911,9 @@ class _ChartsBody extends StatelessWidget {
                       centerSpaceRadius: 48,
                       sectionsSpace: 2,
                       sections: [
-                        PieChartSectionData(
-                          value: sumVol(low),
-                          title: 'Düşük',
-                          radius: 70,
-                        ),
-                        PieChartSectionData(
-                          value: sumVol(mid),
-                          title: 'Orta',
-                          radius: 70,
-                        ),
-                        PieChartSectionData(
-                          value: sumVol(high),
-                          title: 'Yüksek',
-                          radius: 70,
-                        ),
+                        PieChartSectionData(value: sumVol(low), title: 'Düşük', radius: 70),
+                        PieChartSectionData(value: sumVol(mid), title: 'Orta', radius: 70),
+                        PieChartSectionData(value: sumVol(high), title: 'Yüksek', radius: 70),
                       ],
                     ),
                   ),
@@ -1096,98 +933,6 @@ class _ChartsBody extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/* ------------------------------ UI: Harita ------------------------------- */
-
-class _ReservoirMap extends StatelessWidget {
-  final List<_ReservoirWithCoord> items;
-  const _ReservoirMap({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    final pts = items
-        .where((e) => e.loc?.lat != null && e.loc?.lon != null)
-        .toList();
-    if (pts.isEmpty) {
-      return const Center(child: Text('Koordinat bilgisi bulunamadı.'));
-    }
-    final avgLat =
-        pts.map((e) => e.loc!.lat!).reduce((a, b) => a + b) / pts.length;
-    final avgLon =
-        pts.map((e) => e.loc!.lon!).reduce((a, b) => a + b) / pts.length;
-
-    return FlutterMap(
-      options: MapOptions(
-        initialCenter: LatLng(avgLat, avgLon),
-        initialZoom: 8.5,
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'secret_water.app',
-        ),
-        MarkerLayer(
-          markers: [
-            for (final e in pts)
-              Marker(
-                point: LatLng(e.loc!.lat!, e.loc!.lon!),
-                width: 200,
-                height: 44,
-                child: _MapMarker(res: e.status),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _MapMarker extends StatelessWidget {
-  final ReservoirStatus res;
-  const _MapMarker({required this.res});
-
-  @override
-  Widget build(BuildContext context) {
-    Color badgeColor() {
-      final p = res.doluluk ?? 0;
-      if (p >= 60) return Colors.green;
-      if (p >= 30) return Colors.orange;
-      return Colors.red;
-    }
-
-    return GestureDetector(
-      onTap: () {
-        final msg =
-            '${res.ad ?? 'Baraj'}\n'
-            'Doluluk: ${fmtPct(res.doluluk)}\n'
-            'Hacim: ${fmtVol(res.hacim)}';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [BoxShadow(blurRadius: 2, color: Colors.black26)],
-          border: Border.all(color: badgeColor(), width: 2),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.water_outlined, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              '${res.ad ?? 'Baraj'} • ${fmtPct(res.doluluk)}',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -1271,8 +1016,7 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
           _safetyPct = 15;
           break;
         case 'Özel':
-          // mevcut değerleri koru
-          _safetyPct = _safetyPct.clamp(0, 50);
+          _safetyPct = _safetyPct.clamp(0.0, 50.0).toDouble();
           break;
       }
     });
@@ -1318,7 +1062,12 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
   @override
   Widget build(BuildContext context) {
     final res = _calc();
-    final scale = MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.6);
+    final double scale = MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.6).toDouble();
+
+    // Gamification: ilk hesaplama görevi (bir kez)
+    if (res.totalLitres > 0) {
+      Gamify.checkAndComplete(context, 'first_calc', xp: 20, label: 'İlk Hesap');
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
@@ -1339,48 +1088,18 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _ChipBtn(
-                          label: 'Acil',
-                          selected: _profile == 'Acil',
-                          onTap: () => _applyPreset('Acil'),
-                        ),
-                        _ChipBtn(
-                          label: 'Temel',
-                          selected: _profile == 'Temel',
-                          onTap: () => _applyPreset('Temel'),
-                        ),
-                        _ChipBtn(
-                          label: 'Konfor',
-                          selected: _profile == 'Konfor',
-                          onTap: () => _applyPreset('Konfor'),
-                        ),
-                        _ChipBtn(
-                          label: 'Özel',
-                          selected: _profile == 'Özel',
-                          onTap: () => _applyPreset('Özel'),
-                        ),
+                        _ChipBtn(label: 'Acil', selected: _profile == 'Acil', onTap: () => _applyPreset('Acil')),
+                        _ChipBtn(label: 'Temel', selected: _profile == 'Temel', onTap: () => _applyPreset('Temel')),
+                        _ChipBtn(label: 'Konfor', selected: _profile == 'Konfor', onTap: () => _applyPreset('Konfor')),
+                        _ChipBtn(label: 'Özel', selected: _profile == 'Özel', onTap: () => _applyPreset('Özel')),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(
-                          child: _numField(
-                            controller: _peopleCtrl,
-                            label: 'Kişi sayısı',
-                            min: 1,
-                            max: 200,
-                          ),
-                        ),
+                        Expanded(child: _numField(controller: _peopleCtrl, label: 'Kişi sayısı', min: 1, max: 200)),
                         const SizedBox(width: 12),
-                        Expanded(
-                          child: _numField(
-                            controller: _daysCtrl,
-                            label: 'Gün',
-                            min: 1,
-                            max: 120,
-                          ),
-                        ),
+                        Expanded(child: _numField(controller: _daysCtrl, label: 'Gün', min: 1, max: 120)),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -1390,16 +1109,14 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Güvenlik Payı (%)',
-                                  style: Theme.of(context).textTheme.labelLarge),
+                              Text('Güvenlik Payı (%)', style: Theme.of(context).textTheme.labelLarge),
                               Slider(
                                 value: _safetyPct,
                                 min: 0,
                                 max: 50,
                                 divisions: 50,
                                 label: '${_safetyPct.toStringAsFixed(0)}%',
-                                onChanged: (v) =>
-                                    setState(() => _safetyPct = v),
+                                onChanged: (v) => setState(() => _safetyPct = v),
                               ),
                             ],
                           ),
@@ -1409,10 +1126,7 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
                           child: Text(
                             '+${_safetyPct.toStringAsFixed(0)}%',
                             textAlign: TextAlign.end,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
                       ],
@@ -1433,16 +1147,14 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
                   children: [
                     _SectionTitle(
                         icon: Icons.format_list_bulleted,
-                        title:
-                            'Kişi başı (L / gün)  •  Toplam: ${_sumPerPerson().toStringAsFixed(0)} L'),
+                        title: 'Kişi başı (L / gün)  •  Toplam: ${_sumPerPerson().toStringAsFixed(0)} L'),
                     const SizedBox(height: 8),
                     ..._perPersonBreakdown.entries.map((e) {
                       return _BreakdownSlider(
                         label: e.key,
                         value: e.value,
-                        enabled: _isCustom, // Özel değilse sadece göster
-                        onChanged: (v) =>
-                            setState(() => _perPersonBreakdown[e.key] = v),
+                        enabled: _isCustom,
+                        onChanged: (v) => setState(() => _perPersonBreakdown[e.key] = v),
                       );
                     }),
                     if (!_isCustom)
@@ -1466,23 +1178,11 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
                 _SummaryBig(
                   icon: Icons.water_drop,
                   title: 'Toplam',
-                  value:
-                      '${res.totalLitres.toStringAsFixed(0)} L',
-                  subtitle:
-                      '${res.people} kişi × ${res.days} gün + %${_safetyPct.toStringAsFixed(0)} güvenlik',
+                  value: '${res.totalLitres.toStringAsFixed(0)} L',
+                  subtitle: '${res.people} kişi × ${res.days} gün + %${_safetyPct.toStringAsFixed(0)} güvenlik',
                 ),
-                _SummaryBig(
-                  icon: Icons.person,
-                  title: 'Kişi Başı / Gün',
-                  value: '${res.perPerson.toStringAsFixed(0)} L',
-                  subtitle: _profile,
-                ),
-                _SummaryBig(
-                  icon: Icons.local_drink_outlined,
-                  title: 'Baz İhtiyaç',
-                  value: '${res.baseLitres.toStringAsFixed(0)} L',
-                  subtitle: 'Güvenlik: +${res.safetyLitres.toStringAsFixed(0)} L',
-                ),
+                _SummaryBig(icon: Icons.person, title: 'Kişi Başı / Gün', value: '${res.perPerson.toStringAsFixed(0)} L', subtitle: _profile),
+                _SummaryBig(icon: Icons.local_drink_outlined, title: 'Baz İhtiyaç', value: '${res.baseLitres.toStringAsFixed(0)} L', subtitle: 'Güvenlik: +${res.safetyLitres.toStringAsFixed(0)} L'),
               ],
             ),
 
@@ -1520,8 +1220,7 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
                         Expanded(
                           child: TextFormField(
                             controller: _pricePerLitreCtrl,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             decoration: const InputDecoration(
                               labelText: 'Litre başı fiyat (₺) — opsiyonel',
                               border: OutlineInputBorder(),
@@ -1534,9 +1233,7 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
                           child: _InfoTile(
                             icon: Icons.payments_outlined,
                             title: 'Tahmini Maliyet',
-                            value: res.estimatedCost == null
-                                ? '-'
-                                : '₺ ${res.estimatedCost!.toStringAsFixed(2)}',
+                            value: res.estimatedCost == null ? '-' : '₺ ${res.estimatedCost!.toStringAsFixed(2)}',
                           ),
                         ),
                       ],
@@ -1555,9 +1252,7 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SectionTitle(
-                        icon: Icons.inventory_2_outlined,
-                        title: 'Konteyner / Depolama Önerisi'),
+                    _SectionTitle(icon: Icons.inventory_2_outlined, title: 'Konteyner / Depolama Önerisi'),
                     const SizedBox(height: 8),
                     _ContainerRow(icon: Icons.local_drink, label: '0.5 L şişe', count: res.n05),
                     _ContainerRow(icon: Icons.local_drink, label: '1.5 L şişe', count: res.n15),
@@ -1574,7 +1269,7 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
               ),
             ),
 
-            SizedBox(height: 8 * scale.toDouble()),
+            SizedBox(height: 8 * scale),
           ],
         ),
       ),
@@ -1590,14 +1285,8 @@ class _NeedsCalculatorTabState extends State<NeedsCalculatorTab> {
   }) {
     return TextFormField(
       controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(
-        signed: false,
-        decimal: false,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
+      keyboardType: const TextInputType.numberWithOptions(signed: false, decimal: false),
+      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
       validator: (v) {
         final n = int.tryParse((v ?? '').trim());
         if (n == null) return 'Sayı girin';
@@ -1640,6 +1329,439 @@ class _CalcResult {
   });
 }
 
+/* ------------------------------ Üyelik & Gamification -------------------- */
+
+class AccountPage extends StatefulWidget {
+  const AccountPage({super.key});
+  @override
+  State<AccountPage> createState() => _AccountPageState();
+}
+
+class _AccountPageState extends State<AccountPage> {
+  bool _isLogin = true;
+  final _name = TextEditingController();
+  final _pass = TextEditingController();
+
+  Future<void> _submit() async {
+    final name = _name.text.trim();
+    final pass = _pass.text.trim();
+    if (name.isEmpty || pass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen ad ve şifre girin.')));
+      return;
+    }
+    final ok = _isLogin
+        ? await Gamify.login(name, pass)
+        : await Gamify.signup(name, pass);
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isLogin ? 'Giriş başarısız.' : 'Kayıt başarısız.')));
+      return;
+    }
+    if (!_isLogin) {
+      await Gamify.addXp(context, 20, label: 'Hoş geldin');
+    }
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: Gamify.currentUser(),
+      builder: (context, snap) {
+        final user = snap.data;
+        if (user == null) {
+          // Giriş / Kayıt ekranı
+          return Scaffold(
+            appBar: AppBar(title: const Text('Üyelik')),
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ToggleButtons(
+                            isSelected: [_isLogin, !_isLogin],
+                            onPressed: (i) => setState(() => _isLogin = (i == 0)),
+                            children: const [
+                              Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Giriş')),
+                              Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Kayıt')),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: _name,
+                            decoration: const InputDecoration(labelText: 'Kullanıcı adı', border: OutlineInputBorder()),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: _pass,
+                            obscureText: true,
+                            decoration: const InputDecoration(labelText: 'Şifre', border: OutlineInputBorder()),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: _submit,
+                              icon: Icon(_isLogin ? Icons.login : Icons.person_add_alt),
+                              label: Text(_isLogin ? 'Giriş Yap' : 'Kayıt Ol'),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text('Not: Bu demo tamamen cihaz içinde çalışır (offline).', style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Profil / Gamification paneli
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Profilim'),
+            actions: [
+              IconButton(
+                tooltip: 'Çıkış',
+                onPressed: () async {
+                  await Gamify.logout();
+                  if (mounted) setState(() {});
+                },
+                icon: const Icon(Icons.logout),
+              )
+            ],
+          ),
+          body: FutureBuilder<_ProfileData>(
+            future: Gamify.profileData(),
+            builder: (context, s) {
+              final p = s.data;
+              if (p == null) return const Center(child: CircularProgressIndicator());
+
+              final level = p.level;
+              final xpToNext = ((level * 100) - p.xp).clamp(0, 99999);
+
+              return ListView(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          CircleAvatar(radius: 28, child: Text(user[0].toUpperCase())),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(user, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 4),
+                                Text('Seviye $level • XP ${p.xp}', style: Theme.of(context).textTheme.labelLarge),
+                                const SizedBox(height: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: LinearProgressIndicator(value: ((p.xp % 100) / 100.0).clamp(0.0, 1.0).toDouble(), minHeight: 10),
+                                ),
+                                const SizedBox(height: 4),
+                                Text('Sonraki seviyeye: $xpToNext XP', style: Theme.of(context).textTheme.bodySmall),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _SectionTitle(icon: Icons.local_fire_department_outlined, title: 'Günlük Giriş (Streak)'),
+                                const SizedBox(height: 8),
+                                Text('Seri: ${p.streak} gün', style: Theme.of(context).textTheme.titleMedium),
+                                const SizedBox(height: 8),
+                                FilledButton.icon(
+                                  onPressed: () => Gamify.dailyCheckIn(context),
+                                  icon: const Icon(Icons.emoji_events_outlined),
+                                  label: const Text('Bugün giriş yap (+5 XP)'),
+                                ),
+                                const SizedBox(height: 6),
+                                Text('Son giriş: ${p.lastCheckIn ?? '-'}', style: Theme.of(context).textTheme.bodySmall),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionTitle(icon: Icons.task_alt_outlined, title: 'Görevler'),
+                          const SizedBox(height: 8),
+                          _TaskTile(
+                            done: p.done.contains('first_calc'),
+                            title: 'İlk hesaplamanı yap',
+                            xp: 20,
+                            tip: 'Hesaplama ekranında bir sonuç oluştur.',
+                          ),
+                          _TaskTile(
+                            done: p.done.contains('view_charts'),
+                            title: 'Grafikleri görüntüle',
+                            xp: 15,
+                            tip: 'Barajlar → Grafikler sekmesine geç.',
+                          ),
+                          _TaskTile(
+                            done: p.done.contains('filter_use'),
+                            title: 'Filtre ustası',
+                            xp: 15,
+                            tip: 'Kesintiler ekranında 3+ kez filtreyi kullan.',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionTitle(icon: Icons.military_tech_outlined, title: 'Rozetler'),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _BadgeChip(text: 'Yeni Başlayan', active: p.xp >= 50),
+                              _BadgeChip(text: 'Tasarrufçu', active: p.xp >= 200),
+                              _BadgeChip(text: 'Usta Analist', active: p.done.contains('view_charts')),
+                              _BadgeChip(text: 'Filtre Ustası', active: p.done.contains('filter_use')),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TaskTile extends StatelessWidget {
+  final bool done;
+  final String title;
+  final int xp;
+  final String tip;
+  const _TaskTile({required this.done, required this.title, required this.xp, required this.tip});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, color: done ? Colors.green : null),
+      title: Text(title),
+      subtitle: Text(done ? 'Tamamlandı' : 'Ödül: +$xp XP • $tip'),
+    );
+  }
+}
+
+class _BadgeChip extends StatelessWidget {
+  final String text;
+  final bool active;
+  const _BadgeChip({required this.text, required this.active});
+  @override
+  Widget build(BuildContext context) {
+    final c = active ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor;
+    return Chip(
+      avatar: CircleAvatar(backgroundColor: c, child: const Icon(Icons.star, size: 14, color: Colors.white)),
+      label: Text(text, style: TextStyle(color: active ? null : Theme.of(context).disabledColor)),
+      side: BorderSide(color: c.withOpacity(.4)),
+      backgroundColor: c.withOpacity(.08),
+    );
+  }
+}
+
+// Basit profil verisi
+class _ProfileData {
+  final int xp;
+  final int level;
+  final int streak;
+  final String? lastCheckIn;
+  final Set<String> done;
+  _ProfileData({required this.xp, required this.level, required this.streak, required this.lastCheckIn, required this.done});
+}
+
+// Gamification & Auth helper (SharedPreferences)
+class Gamify {
+  // AUTH
+  static Future<bool> signup(String name, String pass) async {
+    final p = await SharedPreferences.getInstance();
+    if (p.getString('user_name') != null) return false; // tek kullanıcı (demo)
+    await p.setString('user_name', name);
+    await p.setString('user_pass', pass);
+    await p.setInt('xp', 0);
+    await p.setInt('streak', 0);
+    await p.setString('last_check', '');
+    await p.setStringList('tasks_done', []);
+    await p.setInt('cnt_filter_use', 0);
+    return true;
+  }
+
+  static Future<bool> login(String name, String pass) async {
+    final p = await SharedPreferences.getInstance();
+    final n = p.getString('user_name');
+    final pw = p.getString('user_pass');
+    return (n == name && pw == pass);
+  }
+
+  static Future<void> logout() async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove('user_name'); // demo: tamamen siliyoruz
+    await p.remove('user_pass');
+    await p.remove('xp');
+    await p.remove('streak');
+    await p.remove('last_check');
+    await p.remove('tasks_done');
+    await p.remove('cnt_filter_use');
+  }
+
+  static Future<String?> currentUser() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getString('user_name');
+  }
+
+  // XP & LEVEL
+  static Future<int> xp() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getInt('xp') ?? 0;
+    }
+
+  static Future<void> addXp(BuildContext context, int amount, {String? label}) async {
+    final p = await SharedPreferences.getInstance();
+    final cur = p.getInt('xp') ?? 0;
+    await p.setInt('xp', cur + amount);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('🏆 +$amount XP${label != null ? ' • $label' : ''}')),
+      );
+    }
+  }
+
+  static Future<int> level() async {
+    final x = await xp();
+    return (x ~/ 100) + 1;
+  }
+
+  // Tasks
+  static Future<_ProfileData> profileData() async {
+    final p = await SharedPreferences.getInstance();
+    final x = p.getInt('xp') ?? 0;
+    final st = p.getInt('streak') ?? 0;
+    final lc = p.getString('last_check');
+    final done = Set<String>.from(p.getStringList('tasks_done') ?? []);
+    final lvl = (x ~/ 100) + 1;
+    return _ProfileData(xp: x, level: lvl, streak: st, lastCheckIn: (lc == null || lc.isEmpty) ? null : lc, done: done);
+  }
+
+  static Future<void> _markDone(String key) async {
+    final p = await SharedPreferences.getInstance();
+    final list = p.getStringList('tasks_done') ?? [];
+    if (!list.contains(key)) {
+      list.add(key);
+      await p.setStringList('tasks_done', list);
+    }
+  }
+
+  static Future<void> checkAndComplete(BuildContext context, String key, {required int xp, String? label}) async {
+    final p = await SharedPreferences.getInstance();
+    final list = p.getStringList('tasks_done') ?? [];
+    if (!list.contains(key)) {
+      await addXp(context, xp, label: label);
+      await _markDone(key);
+    }
+  }
+
+  static Future<void> incrementCounter(BuildContext context, String key, {required int target, required int xp, String? label}) async {
+    final p = await SharedPreferences.getInstance();
+    final k = 'cnt_$key';
+    final cur = p.getInt(k) ?? 0;
+    final next = cur + 1;
+    await p.setInt(k, next);
+
+    final doneList = p.getStringList('tasks_done') ?? [];
+    if (next >= target && !doneList.contains(key)) {
+      await addXp(context, xp, label: label);
+      await _markDone(key);
+    }
+  }
+
+  // Daily check-in
+  static Future<void> dailyCheckIn(BuildContext context) async {
+    final p = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final last = p.getString('last_check') ?? '';
+    int streak = p.getInt('streak') ?? 0;
+
+    if (last == today) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bugün zaten giriş yaptın.')));
+      }
+      return;
+    }
+
+    // dünkü kontrolü
+    DateTime? lastDate;
+    if (last.isNotEmpty) {
+      try {
+        lastDate = DateTime.parse(last);
+      } catch (_) {}
+    }
+    if (lastDate != null) {
+      final diff = DateTime.now().difference(lastDate).inDays;
+      if (diff == 1) {
+        streak += 1;
+      } else {
+        streak = 1;
+      }
+    } else {
+      streak = 1;
+    }
+
+    await p.setString('last_check', today);
+    await p.setInt('streak', streak);
+    await addXp(context, 5, label: 'Günlük Giriş');
+  }
+}
+
 /* ------------------------------ Küçük UI bileşenleri -------------------- */
 
 class _ChipBtn extends StatelessWidget {
@@ -1650,11 +1772,7 @@ class _ChipBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-    );
+    return ChoiceChip(label: Text(label), selected: selected, onSelected: (_) => onTap());
   }
 }
 
@@ -1663,12 +1781,7 @@ class _BreakdownSlider extends StatelessWidget {
   final double value;
   final bool enabled;
   final ValueChanged<double> onChanged;
-  const _BreakdownSlider({
-    required this.label,
-    required this.value,
-    required this.enabled,
-    required this.onChanged,
-  });
+  const _BreakdownSlider({required this.label, required this.value, required this.enabled, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -1697,10 +1810,7 @@ class _BreakdownSlider extends StatelessWidget {
             child: Text(
               '${value.toStringAsFixed(0)} L',
               textAlign: TextAlign.end,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -1722,9 +1832,7 @@ class _SummaryBigRow extends StatelessWidget {
       return Wrap(
         spacing: gap,
         runSpacing: gap,
-        children: items
-            .map((e) => SizedBox(width: tileW, child: e))
-            .toList(growable: false),
+        children: items.map((e) => SizedBox(width: tileW, child: e)).toList(growable: false),
       );
     });
   }
@@ -1735,12 +1843,7 @@ class _SummaryBig extends StatelessWidget {
   final String title;
   final String value;
   final String? subtitle;
-  const _SummaryBig({
-    required this.icon,
-    required this.title,
-    required this.value,
-    this.subtitle,
-  });
+  const _SummaryBig({required this.icon, required this.title, required this.value, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -1749,10 +1852,7 @@ class _SummaryBig extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 22,
-              child: Icon(icon),
-            ),
+            CircleAvatar(radius: 22, child: Icon(icon)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1762,18 +1862,12 @@ class _SummaryBig extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   if (subtitle != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        subtitle!,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      child: Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
                     ),
                 ],
               ),
@@ -1806,13 +1900,7 @@ class _InfoTile extends StatelessWidget {
                 children: [
                   Text(title, style: Theme.of(context).textTheme.labelMedium),
                   const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
+                  Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
@@ -1837,27 +1925,25 @@ class _ContainerRow extends StatelessWidget {
           Icon(icon, size: 18),
           const SizedBox(width: 8),
           Expanded(child: Text(label)),
-          Text(count == 0 ? '-' : count.toString(),
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(count == 0 ? '-' : count.toString(), style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
     );
   }
 }
 
-
 /* ------------------------------ küçük yardımcı UI ------------------------ */
 
 Widget _kv(String k, String v) => Padding(
-  padding: const EdgeInsets.only(bottom: 4),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      SizedBox(width: 150, child: Text('$k:')),
-      Expanded(child: Text(v)),
-    ],
-  ),
-);
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 150, child: Text('$k:')),
+          Expanded(child: Text(v)),
+        ],
+      ),
+    );
 
 Widget _errorBox({
   required IconData icon,
@@ -1874,11 +1960,7 @@ Widget _errorBox({
           const SizedBox(height: 8),
           Text(text, textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Tekrar Dene'),
-          ),
+          FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Tekrar Dene')),
         ],
       ),
     ),
@@ -1891,11 +1973,7 @@ class _SummaryTile extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
-  const _SummaryTile({
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
+  const _SummaryTile({required this.title, required this.value, required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -1918,9 +1996,7 @@ class _SummaryTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -1950,10 +2026,7 @@ class _CapacityBar extends StatelessWidget {
           children: [
             const Icon(Icons.storage, size: 16),
             const SizedBox(width: 6),
-            Text(
-              'Kapasite Kullanımı',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
+            Text('Kapasite Kullanımı', style: Theme.of(context).textTheme.labelLarge),
             const Spacer(),
             Text(max == null ? '-' : '${(pct * 100).toStringAsFixed(1)}%'),
           ],
@@ -1961,10 +2034,7 @@ class _CapacityBar extends StatelessWidget {
         const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            minHeight: 10,
-            value: (max == null || max == 0) ? null : pct,
-          ),
+          child: LinearProgressIndicator(minHeight: 10, value: (max == null || max == 0) ? null : pct),
         ),
       ],
     );
@@ -1989,9 +2059,9 @@ class _MetricsGrid extends StatelessWidget {
           cols = 4;
         }
 
-        // Cihazdaki yazı ölçeğine göre karo yüksekliğini büyüt
-        final scale = MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.6);
-        final double tileHeight = 48 * scale + 8; // eskisi 52 sabitti
+        final double scale =
+            MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.6).toDouble();
+        final double tileHeight = 48 * scale + 8;
 
         return GridView.builder(
           itemCount: entries.length,
@@ -2008,9 +2078,7 @@ class _MetricsGrid extends StatelessWidget {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceVariant.withOpacity(0.4),
+                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -2021,10 +2089,7 @@ class _MetricsGrid extends StatelessWidget {
                     e.k,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    // satır yüksekliğini sıkı tut
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelSmall?.copyWith(height: 1.05),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(height: 1.05),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -2032,9 +2097,9 @@ class _MetricsGrid extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      height: 1.1,
-                    ),
+                          fontWeight: FontWeight.w600,
+                          height: 1.1,
+                        ),
                   ),
                 ],
               ),
@@ -2054,42 +2119,24 @@ class _MiniDataTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final headers = ['Seviye', 'Mevcut', 'Max', 'Doluluk', 'Tarih'];
 
-    // Satır yüksekliklerini yazı ölçeğine göre hesapla
-    final scale = MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.6);
-    final double dataH = 44 * scale; // veri satırı
-    final double headH = 38 * scale; // başlık satırı
+    final double scale =
+        MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.6).toDouble();
+    final double dataH = 44 * scale;
+    final double headH = 38 * scale;
 
     final table = DataTable(
       headingRowHeight: headH,
       dataRowMinHeight: dataH,
       dataRowMaxHeight: dataH,
-      headingTextStyle: Theme.of(context).textTheme.labelMedium!.copyWith(
-        fontWeight: FontWeight.w700,
-        height: 1.1,
-      ),
-      dataTextStyle: Theme.of(
-        context,
-      ).textTheme.bodyMedium?.copyWith(height: 1.1),
+      headingTextStyle: Theme.of(context).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w700, height: 1.1),
+      dataTextStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.1),
       columnSpacing: 16,
       horizontalMargin: 0,
-      columns: [
-        for (final h in headers)
-          DataColumn(label: Text(h, overflow: TextOverflow.ellipsis)),
-      ],
-      rows: [
-        DataRow(
-          cells: [
-            for (final c in row)
-              DataCell(Text(c, overflow: TextOverflow.ellipsis)),
-          ],
-        ),
-      ],
+      columns: [for (final h in headers) DataColumn(label: Text(h, overflow: TextOverflow.ellipsis))],
+      rows: [DataRow(cells: [for (final c in row) DataCell(Text(c, overflow: TextOverflow.ellipsis))])],
     );
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: table,
-    );
+    return SingleChildScrollView(scrollDirection: Axis.horizontal, child: table);
   }
 }
 
@@ -2103,12 +2150,7 @@ class _SectionTitle extends StatelessWidget {
       children: [
         Icon(icon),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w700),
-        ),
+        Text(title, style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -2121,11 +2163,7 @@ class _LegendDot extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        const CircleAvatar(radius: 6),
-        const SizedBox(width: 6),
-        Text(text),
-      ],
+      children: [const CircleAvatar(radius: 6), const SizedBox(width: 6), Text(text)],
     );
   }
 }
@@ -2137,16 +2175,4 @@ class _M {
 
 extension _StrX on String {
   String ifEmpty(String alt) => trim().isEmpty ? alt : this;
-}
-
-// mevcut veri bağlama tipleri
-class _ReservoirWithCoord {
-  final ReservoirStatus status;
-  final WaterSource? loc;
-  _ReservoirWithCoord({required this.status, required this.loc});
-}
-
-class _ReservoirBundle {
-  final List<_ReservoirWithCoord> all;
-  _ReservoirBundle({required this.all});
 }
